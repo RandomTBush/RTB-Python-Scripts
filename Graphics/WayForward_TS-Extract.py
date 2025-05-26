@@ -8,7 +8,7 @@ from PIL import Image
 # WayForward GBA/DS/LeapFrog Didj tileset (*.TS4 / *.TS8) metatile extraction script written by Random Talking Bush.
 # Based only slightly on onepill's TextureUnpacker script: https://github.com/onepill/texture_unpacker_scirpt
 
-TSFormat = 1 # See the list below for which value should be used for the game you're ripping from.
+TSFormat = 0 # See the list below for which value should be used for the game you're ripping from.
 TilesetName = "365_9840500" # The name of the tileset PNG file(s). (Example: "365_9840500" will be the Bramble Maze's foreground .TS4 filename when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
 
 UseGBAROM = False # Change this to True to read from a GBA ROM instead of a .TS4/.TS8 file. Make sure both the "ROMName" and "TilesetStart" lines below are filled in correctly. For experts only -- you're better off using my QuickBMS scripts to unpack the ROM files instead.
@@ -115,7 +115,7 @@ TilesetFlags = struct.unpack('<H', ts4file.read(2))[0] # Flags. 0x0001 = 256-col
 MetatileCount = struct.unpack('<H', ts4file.read(2))[0] # How many 16x16 metatiles (consisting of four 8x8 tiles) there are.
 TileCount = struct.unpack('<H', ts4file.read(2))[0] # How many 8x8 tiles there are.
 if TSFormat > 0:
-    MetatileUnk = struct.unpack('<H', ts4file.read(2))[0] # Early GBA games don't have a fourth set of bytes in the headaer.
+    MetatileUnk = struct.unpack('<H', ts4file.read(2))[0] # Early GBA games don't have a fourth set of bytes in the header.
 
 if TileCount > 1024 and TSFormat < 2:
     print("WARNING: Tileset uses GBA format and has over 1024 tiles. Expect broken metatiles.")
@@ -193,7 +193,7 @@ for x in range(MetatileCount):
             CropImage = sprfile.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8)) # Grabbing the right tile.
         else:
             if TilePalette == 0:
-                CropImage = sprfile0.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8)) # Grabbing the right tile from the first paletted tilesheet.
+                CropImage = sprfile0.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8)) # Grabbing the right tile from the first paletted tile sheet.
             elif TilePalette == 1:
                 CropImage = sprfile1.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8)) # Or the second.
             elif TilePalette == 2:

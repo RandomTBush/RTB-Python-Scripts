@@ -8,8 +8,7 @@ from PIL import Image
 # WayForward GBA/DS/LeapFrog Didj screen / map (*.LYR) extraction script written by Random Talking Bush.
 # Based only slightly on onepill's TextureUnpacker script: https://github.com/onepill/texture_unpacker_scirpt
 
-LYRFormat = 3 # See the list below for which value should be used for the game you're ripping from.
-AlignmentFix = False # Certain GBA games need to have their screen data aligned at an offset which is a multiple of 4 (0, 4, 8, C), others will break and be misaligned. See the list below for that as well, and set to False for DS/Didj games. Curiously, the games affected all have compressed .LYR files (except for The Scorpion King)... did I make a mistake with setting up decompressed LYR files with my scripts?
+LYRFormat = 0 # See the list below for which value should be used for the game you're ripping from.
 MetatilesName = "BrambleMaze" # PNG exported from my "WayForward_TS-Extract" script, minus the "_metatile" suffix. If a PNG matching the .LYR's internal tileset ID is autodetected (such as "311_metatile.png", useful for pairing GBA .LYR files), that will be used instead.
 ScreenName = "366_9875572" # Filename of .LYR file, minus extension. Ignored when UseGBAROM is True. (Example: "366_9875572" will be the first foreground layer of the Bramble Maze when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
 
@@ -30,32 +29,32 @@ ScreenStart = 0x96B074 # Offset to the start of the screen data in a GBA ROM. Ig
 
 # Troubleshooting:
 # If the script throws an error or doesn't export anything, check to make sure that the "LYRFormat", "MetatilesName" and "ScreenName" entries are filled in correctly. If UseGBAROM = True, double-check in a hex editor to make sure you have the right offset set up for "ScreenStart" (it tends to start with 0x0000, 0x0010, 0x0020 or 0x0040), and ends in either 0, 4, 8 or C. Shift it forward or backward by 4 at a time if you need to.
-# If the exported screen tiles seem garbled, either your metatiles image is set up incorrectly, you have the wrong offset listed in "ScreenStart" (see above), or you need to toggle the AlignmentFix option (False -> True, or vice versa).
+# If the exported screen tiles seem garbled, either your metatiles image is set up incorrectly, you have the wrong offset listed in "ScreenStart" (see above).
 
 # Works with the following games:
-# ----------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Game Boy Advance:
-# American Dragon: Jake Long - Rise of the Huntsclan        [Set LYRFormat = 3, AlignmentFix = False]
-# Barbie and the Magic of Pegasus                           [Set LYRFormat = 3, AlignmentFix = True]
-# Barbie in the 12 Dancing Princesses                       [Set LYRFormat = 3, AlignmentFix = True]
-# Barbie: The Princess and the Pauper                       [Set LYRFormat = 1, AlignmentFix = False]
-# Godzilla: Domination                                      [Set LYRFormat = 1, AlignmentFix = False]
-# Justice League Heroes: The Flash                          [Set LYRFormat = 3, AlignmentFix = True]
-# Looney Tunes: Double Pack - Dizzy Driving / Acme Antics   [Set LYRFormat = 2, AlignmentFix = False]
-# Rescue Heroes: Billy Blazes                               [Set LYRFormat = 1, AlignmentFix = False]
-# The Scorpion King: Sword of Osiris                        [Set LYRFormat = 0, AlignmentFix = True]
-# Sigma Star Saga                                           [Set LYRFormat = 3, AlignmentFix = True]
-# Shantae Advance: Risky Revolution                         [Set LYRFormat = 2, AlignmentFix = False]
-# Shantae Advance: Risky Revolution (Battle Mode)           [Set LYRFormat = 1, AlignmentFix = False]
-# Shantae Advance: Risky Revolution (Demo)                  [Set LYRFormat = 1, AlignmentFix = False]
-# SpongeBob SquarePants: Creature from the Krusty Krab      [Set LYRFormat = 3, AlignmentFix = True]
-# SpongeBob SquarePants: Lights, Camera, Pants!             [Set LYRFormat = 3, AlignmentFix = True]
-# The SpongeBob SquarePants Movie                           [Set LYRFormat = 1, AlignmentFix = False]
-# Tak: The Great Juju Challenge                             [Set LYRFormat = 3, AlignmentFix = False]
-# Unfabulous!                                               [Set LYRFormat = 3, AlignmentFix = True]
-# X-Men: The Official Game                                  [Set LYRFormat = 3, AlignmentFix = False]
-# ----------------------------------------------------------------------------------------------------
-# DS/DSi [All games use LYRFormat = 3 and AlignmentFix = False]:
+# American Dragon: Jake Long - Rise of the Huntsclan        [Set LYRFormat = 3]
+# Barbie and the Magic of Pegasus                           [Set LYRFormat = 3]
+# Barbie in the 12 Dancing Princesses                       [Set LYRFormat = 3]
+# Barbie: The Princess and the Pauper                       [Set LYRFormat = 1]
+# Godzilla: Domination                                      [Set LYRFormat = 1]
+# Justice League Heroes: The Flash                          [Set LYRFormat = 3]
+# Looney Tunes: Double Pack - Dizzy Driving / Acme Antics   [Set LYRFormat = 2]
+# Rescue Heroes: Billy Blazes                               [Set LYRFormat = 1]
+# The Scorpion King: Sword of Osiris                        [Set LYRFormat = 0]
+# Sigma Star Saga                                           [Set LYRFormat = 3]
+# Shantae Advance: Risky Revolution                         [Set LYRFormat = 2]
+# Shantae Advance: Risky Revolution (Battle Mode)           [Set LYRFormat = 1]
+# Shantae Advance: Risky Revolution (Demo)                  [Set LYRFormat = 1]
+# SpongeBob SquarePants: Creature from the Krusty Krab      [Set LYRFormat = 3]
+# SpongeBob SquarePants: Lights, Camera, Pants!             [Set LYRFormat = 3]
+# The SpongeBob SquarePants Movie                           [Set LYRFormat = 1]
+# Tak: The Great Juju Challenge                             [Set LYRFormat = 3]
+# Unfabulous!                                               [Set LYRFormat = 3]
+# X-Men: The Official Game                                  [Set LYRFormat = 3]
+# --------------------------------------------------------------------------------
+# DS/DSi [All games use LYRFormat = 3]:
 # Aliens: Infestation
 # American Dragon: Jake Long - Attack of the Dark Dragon
 # Barbie and the Three Musketeers
@@ -73,11 +72,11 @@ ScreenStart = 0x96B074 # Offset to the start of the screen data in a GBA ROM. Ig
 # SpongeBob SquarePants: Creature from the Krusty Krab
 # Thor: God of Thunder
 # Where the Wild Things Are
-# ----------------------------------------------------------------------------------------------------
-# LeapFrog Didj [Both games use LYRFormat = 3 and AlignmentFix = False]:
+# --------------------------------------------------------------------------------
+# LeapFrog Didj [Both games use LYRFormat = 3]:
 # Nicktoons: Android Invasion
 # SpongeBob SquarePants: Fists of Foam
-# ----------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Everything below this line should be left alone.
 
 if UseGBAROM == False:
@@ -137,10 +136,10 @@ else:
 ScreenIDRet = scrfile.tell()
 for x in range(ScreenWidth * ScreenHeight):
     ScreenID = struct.unpack('<H', scrfile.read(2))[0] # Which 256x256 screen is used for this section of the map.
-if AlignmentFix == True:
+if LYRFormat == 0:
     if scrfile.tell() % 4 != 0:
         print("Re-aligning...")
-        scrfile.seek(2, 1) # Screen data has to start at an offset which is a multiple of 4 (*0, *4, 8, or *C), so re-align if it's not (it'll never end on an odd number, so shift by 2 will work). This needs to be done *before* reading the sets of data exclusive to newer, pre-DS .LYR formats.
+        scrfile.seek(2, 1) # Screen data has to start at an offset which is a multiple of 4 (*0, *4, 8, or *C) for The Scorpion King, so re-align if it's not (it'll never end on an odd number, so shift by 2 will work).
 if LYRFormat > 2:
     for x in range(ScreenWidth * ScreenHeight):
         ScreenID2 = struct.unpack('<H', scrfile.read(2))[0] # A secondary set of IDs which don't seem necessary for map building.
@@ -201,6 +200,6 @@ for x in range(ScreenWidth * ScreenHeight):
 if UseGBAROM == False:
     outfile = (ScreenName + '/' + 'Full.png') # Setting up the full map file path, will use the .LYR's name for the folder.
 else:
-    outfile = (str(ScreenStart) + '/' + 'Full.png') # Setting up the full map file path, will usethe ROM's offset as the name for the folder.
+    outfile = (str(ScreenStart) + '/' + 'Full.png') # Setting up the full map file path, will use the ROM's offset as the name for the folder.
 MapImage.save(outfile) # Saving the assembled map.
 print("Saved to " + outfile) # We did the other thing.
