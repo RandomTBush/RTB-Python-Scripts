@@ -10,9 +10,9 @@ from PIL import Image, ImagePalette
 
 TSFormat = 1 # See the list below for which value should be used for the game you're ripping from.
 TilesetName = "365" # The name of the tileset TS4/TS8 file, minus extension. Will also be the exported image's filename with a "_metatile" suffix added. (Example: "363" and "365" are for the Bramble Maze's background and foreground .TS4 filenames respectively when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
-SceneName = "362" # The name of the SCN file to use the palette from, minus extension. Leave blank to use a grayscale palette. (Example: "362" is filename for the Bramble Maze scene when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
+SceneName = "362" # The name of the .SCN or .PAL file to use the palette from, minus extension. Leave blank to use a grayscale palette. (Example: "362" is filename for the Bramble Maze scene when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
 
-UseGBAROM = True # Change this to True to read from a GBA ROM instead of a .TS4/.TS8 file. Make sure both the "ROMName" and "TilesetStart" lines below are filled in correctly. For experts only -- you're better off using my QuickBMS scripts to unpack the ROM files instead.
+UseGBAROM = False # Change this to True to read from a GBA ROM instead of a .TS4/.TS8 file. Make sure both the "ROMName" and "TilesetStart" lines below are filled in correctly. For experts only -- you're better off using my QuickBMS scripts to unpack the ROM files instead.
 ROMName = "Shantae.gba" # Game Boy Advance ROM file needed to extract tile data. Ignored when UseGBAROM is False (it uses the "TilesetName" above instead).
 TilesetStart = 0x962774 # Offset to the start of metatile data in a GBA ROM. Ignored when UseGBAROM is False. (Example: 0x962774 is the offset to the Bramble Maze's foreground .TS4 in Shantae Advance: Risky Revolution.)
 SceneStart = 0x95C5DC # Offset to the start of scene data in a GBA ROM. Ignored when UseGBAROM is False. (Example: 0x95C5DC is the offset to the Bramble Maze's SCN file in Shantae Advance: Risky Revolution.)
@@ -121,20 +121,14 @@ if UseGBAROM == False and TSFormat == 3:
         TS4Palette.append(PaletteByteB)
         TS4Palette.append(PaletteByteC)
 else: 
-    ts4file.seek(TilesetStart, 0) # Start reading the ROM/TS4/TS8 file.
-    if SceneName == "" or not os.path.exists(SceneName + ".scn"):
-        if SceneName == "":
-            print("Defaulting to grayscale palette.")
-        else:
-            print("Couldn't find '" + SceneName + ".scn', defaulting to grayscale instead.")
-        TS4Palette = bytearray() # Forcing a grayscale palette for Python 3 compatibility.
-        for x in range(256):
-            TS4Palette.append(x) 
-            TS4Palette.append(x)
-            TS4Palette.append(x)
-    else:
-        scnfile = open(SceneName + ".scn", "rb") # Opens a .SCN file to extract palette information from.
+    ts4file.seek(TilesetStart, 0) # Start reading the .TS4 / .TS8 / ROM file.
+    if os.path.exists(SceneName + ".pal") or os.path.exists(SceneName + ".scn"):
+        if os.path.exists(SceneName + ".pal"):
+            scnfile = open(SceneName + ".pal", "rb") # Opens a .PAL file to extract palette information from.
+        elif os.path.exists(SceneName + ".scn"):
+            scnfile = open(SceneName + ".scn", "rb") # Opens a .SCN file to extract palette information from.
         TS4Palette = bytearray()
+        scnfile.seek(0, 0) # Background palettes are in the first half of the SCN file.
         # I am doing it this way for the sake of "raw" palettes.
         for x in range(256):
             PaletteBytes = struct.unpack('<H', scnfile.read(2))[0]
@@ -144,6 +138,16 @@ else:
             TS4Palette.append(PaletteByteA)
             TS4Palette.append(PaletteByteB)
             TS4Palette.append(PaletteByteC)
+    else:
+        if SceneName == "":
+            print("Defaulting to grayscale palette.")
+        else:
+            print("Couldn't find '" + SceneName + ".scn' or '" + SceneName + ".pal', defaulting to grayscale instead.")
+        TS4Palette = bytearray() # Forcing a grayscale palette for Python 3 compatibility.
+        for x in range(256):
+            TS4Palette.append(x) 
+            TS4Palette.append(x)
+            TS4Palette.append(x)
 
 TilesetFlags = struct.unpack('<H', ts4file.read(2))[0] # Flags. 0x0001 = 256-colour / .TS8 file, 0x0004 = LZSS-compressed, 0x0010 = ???.
 MetatileCount = struct.unpack('<H', ts4file.read(2))[0] # How many 16x16 metatiles (consisting of four 8x8 tiles) there are.

@@ -14,6 +14,7 @@ SceneName = "419" # The name of the .SCN or .PAL file to use the palette from, m
 PaletteNum = 1 # Use the specified palette number (from 0-15) for the exported sprites. If the sprites look off, change this number and re-export. Ignored if sprites are 8BPP / 256-colour.
 SpriteWidth = 256 # Change this and/or the next value to adjust the image dimensions of the sprite output.
 SpriteHeight = 256 # You will need to set this to a higher amount such as 384 for some of the larger sprites, or else they'll be cropped off at the edges. 256 is more than enough for most of them.
+TileBounds = False # Set this to True to use a transparent canvas for the extracted sprites instead of limiting them to their 256-colour palettes, exposing the tile edges in the process.
 
 UseGBAROM = False # Change this to True to read from a GBA ROM instead of a .ANM file. Make sure both the "ROMName" and "SpriteStart" lines below are filled in correctly. For experts only -- you're better off using my QuickBMS scripts to unpack the ROM files instead.
 ROMName = "Shantae.gba" # Game Boy Advance ROM file needed to extract sprite data. Ignored when UseGBAROM is False (it uses the "SpriteName" above instead).
@@ -240,7 +241,10 @@ for x in range(FrameTotal):
         else:
             print("Unknown piece size at " + str(hex(anmfile.tell())) + " (" + str(hex(PieceSize[s])) + ")!")
 
-    result_image = Image.new('P', (SpriteWidth, SpriteHeight), (0, 0, 0, 255)) # Initializing the assembled sprite PNG in memory.
+    if TileBounds == True:
+        result_image = Image.new('RGBA', (SpriteWidth, SpriteHeight), (0, 0, 0, 0)) # Initializing the assembled (transparent) sprite PNG in memory.
+    else:
+        result_image = Image.new('P', (SpriteWidth, SpriteHeight), (0, 0, 0, 255)) # Initializing the assembled (palettized) sprite PNG in memory.
     for s in range(PieceCount):
         anmfile.seek(FrameStart[x] + (TileStart[s] * 32), 0) # Jump to the beginning of the piece's tiles.
         # print(str(PivotX[s]) + "," + str(PivotY[s]) + " | " + str(hex(PieceSize[s])) + " | " + str(TileStart[s])) # Uncomment to watch the script print piece information as it builds the sprites.
@@ -270,6 +274,8 @@ for x in range(FrameTotal):
                     TempTile.append(TileByteA)
                     TempTile.append(TileByteB)
                 CropImage = Image.frombuffer('L', (8,8), TempTile, 'raw', 'L', 0, 1)
+            if TileBounds == True:
+                TileImage.putpalette(ANMPalette) # If using the "TileBounds" option, apply the palette before pasting it instead of after.
             TileImage.paste(CropImage, (TilePasteX * 8, TilePasteY * 8), mask=0) # Pasting the tile in the right spot.
             TilePasteX = TilePasteX + 1 # Shift right by 1 tile.
             if TilePasteX == TileWidth[s]:
@@ -281,7 +287,8 @@ for x in range(FrameTotal):
         outfile = (str(SpriteStart) + '/' + str(x) + '.png') # Setting up the file path.
     else:
         outfile = (SpriteName + '/' + str(x) + '.png') # Setting up the file path.
-    result_image.putpalette(ANMPalette)
+    if TileBounds == False:
+        result_image.putpalette(ANMPalette) # Applying the palette to the resulting image.
     result_image.save(outfile) # Saving the file.
     print("Saved to " + outfile) # We did the thing.
 
