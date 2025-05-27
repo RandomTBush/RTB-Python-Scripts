@@ -10,11 +10,11 @@ from PIL import Image
 
 LYRFormat = 0 # See the list below for which value should be used for the game you're ripping from.
 MetatilesName = "BrambleMaze" # PNG exported from my "WayForward_TS-Extract" script, minus the "_metatile" suffix. If a PNG matching the .LYR's internal tileset ID is autodetected (such as "311_metatile.png", useful for pairing GBA .LYR files), that will be used instead.
-ScreenName = "366_9875572" # Filename of .LYR file, minus extension. Ignored when UseGBAROM is True. (Example: "366_9875572" will be the first foreground layer of the Bramble Maze when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
+ScreenName = "366" # Filename of .LYR file, minus extension. Ignored when UseGBAROM is True. (Example: "366" will be the first foreground layer of the Bramble Maze when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
 
 UseGBAROM = False # Change this to true to read from a GBA ROM instead of a .LYR file. Make sure both the "ROMName" and "ScreenStart" lines below are filled in correctly.
 ROMName = "Shantae.gba" # GBA ROM file needed to extract map data. Ignored when UseGBAROM is False.
-ScreenStart = 0x96B074 # Offset to the start of the screen data in a GBA ROM. Ignored when UseGBAROM is False. (Example: "0x96B074" will be the first foreground layer of the Bramble Maze when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
+ScreenStart = 0x96B074 # Offset to the start of the screen data in a GBA ROM. Ignored when UseGBAROM is False. (Example: "0x96B074" will be the first foreground layer of the Bramble Maze in Shantae Advance: Risky Revolution.)
 
 # Instructions on how to use this script:
 # 1. Install both Python (either 2 or 3, both work) and Pillow: https://github.com/python-pillow/Pillow

@@ -3,34 +3,34 @@ import sys
 import platform
 import glob
 import struct
-from PIL import Image
+from PIL import Image, ImagePalette
 
 # WayForward GBA/DS/LeapFrog Didj tileset (*.TS4 / *.TS8) metatile extraction script written by Random Talking Bush.
 # Based only slightly on onepill's TextureUnpacker script: https://github.com/onepill/texture_unpacker_scirpt
 
-TSFormat = 0 # See the list below for which value should be used for the game you're ripping from.
-TilesetName = "365_9840500" # The name of the tileset PNG file(s). (Example: "365_9840500" will be the Bramble Maze's foreground .TS4 filename when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
+TSFormat = 1 # See the list below for which value should be used for the game you're ripping from.
+TilesetName = "365" # The name of the tileset TS4/TS8 file, minus extension. Will also be the exported image's filename with a "_metatile" suffix added. (Example: "363" and "365" are for the Bramble Maze's background and foreground .TS4 filenames respectively when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
+SceneName = "362" # The name of the SCN file to use the palette from, minus extension. Leave blank to use a grayscale palette. (Example: "362" is filename for the Bramble Maze scene when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
 
-UseGBAROM = False # Change this to True to read from a GBA ROM instead of a .TS4/.TS8 file. Make sure both the "ROMName" and "TilesetStart" lines below are filled in correctly. For experts only -- you're better off using my QuickBMS scripts to unpack the ROM files instead.
+UseGBAROM = True # Change this to True to read from a GBA ROM instead of a .TS4/.TS8 file. Make sure both the "ROMName" and "TilesetStart" lines below are filled in correctly. For experts only -- you're better off using my QuickBMS scripts to unpack the ROM files instead.
 ROMName = "Shantae.gba" # Game Boy Advance ROM file needed to extract tile data. Ignored when UseGBAROM is False (it uses the "TilesetName" above instead).
 TilesetStart = 0x962774 # Offset to the start of metatile data in a GBA ROM. Ignored when UseGBAROM is False. (Example: 0x962774 is the offset to the Bramble Maze's foreground .TS4 in Shantae Advance: Risky Revolution.)
+SceneStart = 0x95C5DC # Offset to the start of scene data in a GBA ROM. Ignored when UseGBAROM is False. (Example: 0x95C5DC is the offset to the Bramble Maze's SCN file in Shantae Advance: Risky Revolution.)
 TileDelimiter = False # Debug option for GBA tilesets with more than 1024 tiles (see "BROKEN TILESETS" section below). This will start ignoring the tile flip flags as soon as it detects a tile with ID 0x0400 (which would correspond to a horizontally-flipped blank tile). This will not "repair" the tileset, but it will make the last section at least *somewhat* legible.
 
 # Instructions on how to use this script:
 # 1. Install both Python (either 2 or 3, both work) and Pillow: https://github.com/python-pillow/Pillow
 # 2. If ripping from a GBA game, use QuickBMS (https://aluigi.altervista.org/quickbms.htm) and one of my "WayForwardGBA" scripts (https://github.com/RandomTBush/RTB-QuickBMS-Scripts/tree/master/Archive) to unpack the game you want to rip from. For DS or Didj games, you can use something like Tinke to unpack the former and 7-Zip for the latter.
-# 3. For a .TS4/.TS8 file, set the UseGBAROM option to False. Change the path for the "TilesetName" entry above to the name of the .ANM file you want to extract (if UseGBAROM = False, otherwise see the section below).
-# 4. Extract the tileset graphics for the respective .TS4/.TS8 file (or GBA ROM) using a tile-viewing program such as TiledGGD (https://www.romhacking.net/utilities/646/). Using one of my QuickBMS scripts to split a GBA ROM's filesystem will make additional files with a "_tiles.bin" suffix, which will make that step easier to set up. Pair those tiles up with their respective palettes from either the first half of a .SCN file or a savestate, and make sure that the extracted tileset matches the .TS4/.TS8 file's name (a set of 16 PNGs for .TS4 files, e.g. "scuttletown_pf.ts4" -> "scuttletown_pf_0.png" through "scuttletown_pf_15.png", or just a single PNG for .TS8 files, e.g. "logo_wayforward.ts8" -> "logo_wayforward.png"), is 128 pixels in width and has a height that encompasses the entire sprite tileset. The "BrambleMaze_#.png" and "scuttletown_pf_#.png" samples supplied from Shantae Advance and Risky's Revenge respectively will give you an example of what you're aiming for regarding .TS4 files.
-# 4B. While .TS8 files only need a single PNG file, .TS4 files will need an additional step. For those, you need to extract 16 copies of the tileset suffixed with _0, _1, _2, and so on until _15, one with each of the 16 background palettes applied to it in order from top to bottom (see above note and sample files if needed).
-# 5. Run the script (no additional command-line parameters needed). If everything's ret-2-go, then resulting "metatile" set can be found in the same folder as the script. This can be used with my "LYR" script to generate a complete screen / map image.
+# 3. For a .TS4/.TS8 file, set the UseGBAROM option to False. Change the path for the "TilesetName" entry above to the name of the .TS4/.TS8 file you want to extract from , and set "SceneName" to the SCN file you want to user the palette from.
+# 4. Run the script (no additional command-line parameters needed). If everything's ret-2-go, then resulting "metatile" set can be found in the same folder as the script. This can be used with my "LYR" script to generate a complete screen / map image.
 
 # ROM-file ripping (for experts):
 # 3B. Set the UseGBAROM option to True, change the name for the "ROMName" entry to match the GBA ROM you want to try extracting a tileset from (eg. "Shantae.gba", it can either be a relative name or a full path), and the "TilesetName" entry to the name of the extracted tileset PNG (see #4 in the previous section).
 # 3C. Locate the start of the tileset information in the GBA ROM, which has the visual appearance of random pixels scattered about and is always located above the tileset (not below). At the very top of the "thinner" set and immediately following the tiles of the previous sprite set should be the offset you want to fill in for the "SpriteStart" value above.
 
 # Troubleshooting:
-# If the script throws an error or doesn't export anything, check to make sure that you have the right "TSFormat" value filled in. If extracting from a GBA ROM instead of a .TS4/.TS8 file, make sure that the "TilesetStart" offset ends in either 0, 4, 8 or C, double-check in a hex editor to make sure you're in the right spot if you need to. The metatile assembly data starts with either 0x0000, 0x0001, or 0x0010 usually, with a block of eight "00" bytes a few ahead of it (the first metatile is always empty). Shift it forward or backward by 4 at a time if you need to.
-# If the assembled tileset seems to be garbled, make sure that your tileset PNG(s) has a width of 128 pixels (I didn't code it to check for different widths, sorry), and that it is correctly aligned to the beginning of the tileset data. If you're using a "_tiles.bin" exported from one of my GBA-splitting QuickBMS scripts, the starting offset won't need to be adjusted, otherwise you might need to shift forward or backward by a tile, and make sure it starts with a blank tile.
+# If the script throws an error or doesn't export anything, check to make sure that you have the right "TSFormat" and "TilesetName" values filled in.
+# If extracting from a GBA ROM instead of a .TS4/.TS8 file, make sure that the "TilesetStart" offset ends in either 0, 4, 8 or C, double-check in a hex editor to make sure you're in the right spot if you need to. The metatile assembly data starts with either 0x0000, 0x0001, or 0x0010 usually, with a block of eight "00" bytes a few ahead of it (the first metatile is always empty). Shift it forward or backward by 4 at a time if you need to.
 
 # Works with the following games:
 # --------------------------------------------------------------------------------
@@ -97,7 +97,7 @@ if UseGBAROM == False:
         else:
             ts4file = open(TilesetName + '.ts8', "rb") # Opens a .TS8 file, uses the name listed in "TilesetName" above.
     else:
-        ts4file = open(TilesetName + '.ts4', "rb") # Opens a .TS8 file, uses the name listed in "TilesetName" above.
+        ts4file = open(TilesetName + '.ts4', "rb") # Opens a .TS4 file, uses the name listed in "TilesetName" above.
 else:
     if not os.path.exists(ROMName):
         print("Can't find " + ROMName + ". Check to make sure you filled in the 'ROMName' entry correctly.")
@@ -107,9 +107,43 @@ else:
         ts4file = open(ROMName, "rb") # Opens a ROM file needed to extract tileset data, see the above note for the "TilesetStart" offset.
 
 if UseGBAROM == False and TSFormat == 3:
-    ts4file.seek(512, 0) # LeapFrog Didj has a 0x200 palette block at the beginning of its .TS4/.TS8 files, which is considered part of the file for its offset calculations.
+    # LeapFrog Didj has a 0x200 palette block at the beginning of its .TS4/.TS8 files, which is considered part of the file for its offset calculations.
+    print("Didj format tileset, using internal palette.")
+    ts4file.seek(0, 0) # Start reading the TS4/TS8 file.
+    TS4Palette = bytearray()
+    # I am doing it this way for the sake of "raw" palettes.
+    for x in range(256):
+        PaletteBytes = struct.unpack('<H', ts4file.read(2))[0]
+        PaletteByteA = ((PaletteBytes & 0x001F)) * 8
+        PaletteByteB = ((PaletteBytes & 0x03E0) >> 5) * 8
+        PaletteByteC = ((PaletteBytes & 0x7C00) >> 10) * 8
+        TS4Palette.append(PaletteByteA)
+        TS4Palette.append(PaletteByteB)
+        TS4Palette.append(PaletteByteC)
 else: 
     ts4file.seek(TilesetStart, 0) # Start reading the ROM/TS4/TS8 file.
+    if SceneName == "" or not os.path.exists(SceneName + ".scn"):
+        if SceneName == "":
+            print("Defaulting to grayscale palette.")
+        else:
+            print("Couldn't find '" + SceneName + ".scn', defaulting to grayscale instead.")
+        TS4Palette = bytearray() # Forcing a grayscale palette for Python 3 compatibility.
+        for x in range(256):
+            TS4Palette.append(x) 
+            TS4Palette.append(x)
+            TS4Palette.append(x)
+    else:
+        scnfile = open(SceneName + ".scn", "rb") # Opens a .SCN file to extract palette information from.
+        TS4Palette = bytearray()
+        # I am doing it this way for the sake of "raw" palettes.
+        for x in range(256):
+            PaletteBytes = struct.unpack('<H', scnfile.read(2))[0]
+            PaletteByteA = ((PaletteBytes & 0x001F)) * 8
+            PaletteByteB = ((PaletteBytes & 0x03E0) >> 5) * 8
+            PaletteByteC = ((PaletteBytes & 0x7C00) >> 10) * 8
+            TS4Palette.append(PaletteByteA)
+            TS4Palette.append(PaletteByteB)
+            TS4Palette.append(PaletteByteC)
 
 TilesetFlags = struct.unpack('<H', ts4file.read(2))[0] # Flags. 0x0001 = 256-colour / .TS8 file, 0x0004 = LZSS-compressed, 0x0010 = ???.
 MetatileCount = struct.unpack('<H', ts4file.read(2))[0] # How many 16x16 metatiles (consisting of four 8x8 tiles) there are.
@@ -124,48 +158,12 @@ if TSFormat == 2 or TSFormat == 3:
 else:
     TileOffset = (ts4file.tell() + (MetatileCount * 8))
 
-if TilesetFlags & 0x0001 == 1:
-    if not os.path.exists(TilesetName + '.png'):
-        if UseGBAROM == False:
-            print("Can't find tileset image ('" + TilesetName + ".png'). You should find the tiles at offset " + str(hex(TileOffset)) + " in the '" + TilesetName + "' file.")
-        else:
-            print("Can't find tileset image ('" + TilesetName + ".png'). You should find the tiles at offset " + str(hex(TileOffset)) + " in the '" + ROMName + "' file (if this doesn't lead to tile data, you likely have the wrong offset for 'TilesetStart').")
-        os.system('pause')
-        exit()
-    else:
-        sprfile = Image.open(TilesetName + '.png') # Open up the 256-colour paletted tileset image.
-else:
-    if not os.path.exists(TilesetName + '_0.png'):
-        if UseGBAROM == False:
-            print("Can't find tileset images ('" + TilesetName + "_0.png'). You should find the tiles at offset " + str(hex(TileOffset)) + " in the '" + TilesetName + "' file.")
-        else:
-            print("Can't find tileset images ('" + TilesetName + "_0.png'). You should find the tiles at offset " + str(hex(TileOffset)) + " in the '" + ROMName + "' file (if this doesn't lead to tile data, you likely have the wrong offset in 'TilesetStart').")
-        os.system('pause')
-        exit()
-    else:
-        sprfile0 = Image.open(TilesetName + '_0.png') # Open up the first paletted tileset image...
-        sprfile1 = Image.open(TilesetName + '_1.png') # ...and the second...
-        sprfile2 = Image.open(TilesetName + '_2.png') # ...et cetera... I don't need to comment every single one of these.
-        sprfile3 = Image.open(TilesetName + '_3.png')
-        sprfile4 = Image.open(TilesetName + '_4.png')
-        sprfile5 = Image.open(TilesetName + '_5.png')
-        sprfile6 = Image.open(TilesetName + '_6.png')
-        sprfile7 = Image.open(TilesetName + '_7.png')
-        sprfile8 = Image.open(TilesetName + '_8.png')
-        sprfile9 = Image.open(TilesetName + '_9.png')
-        sprfileA = Image.open(TilesetName + '_10.png')
-        sprfileB = Image.open(TilesetName + '_11.png')
-        sprfileC = Image.open(TilesetName + '_12.png')
-        sprfileD = Image.open(TilesetName + '_13.png')
-        sprfileE = Image.open(TilesetName + '_14.png')
-        sprfileF = Image.open(TilesetName + '_15.png') # ...up to the 16th.
-
 SheetHeight = (MetatileCount & 0xFFF0) # Maths to determine how large the metatile sheet needs to be
 if (MetatileCount & 0x000F) != 0:
     SheetHeight = SheetHeight + 16 # If it's not a full line, compensate for leftovers.
 
-TileStartX = 0; TileStartY = 0; MetatilePasteX = 0; MetatilePasteY = 0 # Initializing values for metatile assembly.
-TileImage = Image.new('RGBA', (256, SheetHeight), (0, 0, 0, 0)) # Initializing the assembled metatile PNG in memory.
+MetatilePasteX = 0; MetatilePasteY = 0 # Initializing values for metatile assembly.
+TileImage = Image.new('P', (256, SheetHeight), (0, 0, 0, 255)) # Initializing a paletted metatile PNG in memory.
 TileFix = False # In case of emergency, break glass.
 for x in range(MetatileCount):
     for y in range(4):
@@ -173,9 +171,7 @@ for x in range(MetatileCount):
             MetatileFlags = struct.unpack('<L', ts4file.read(4))[0] # Four bytes shared between three different information sets below.
             TileID = (MetatileFlags & 0x0000FFFF) # I don't know the upper limit for this (one of the largest TS4 files, FV_PF_ALL_TS4_NIGHT.ts4 from Where the Wild Things Are, goes up to 0x0875 / 2165).
             TileFlip = (MetatileFlags & 0x0C000000) >> 26 # Second nibble controls horizontal flip (4), vertical flip (8) or both (C).
-            TilePalette = (MetatileFlags & 0xF0000000) >> 28 # Upper nibble controls which palette set it uses.
-            TileStartX = (TileID & 0x000F) * 8 # Maths to determine X position of metatile sheet to cut.
-            TileStartY = (((TileID & 0xFFF0) // 16) * 8) # More maths to determine Y position of metatile sheet to cut.
+            TilePalette = (MetatileFlags & 0xF0000000) >> 24 # Upper nibble controls which palette set it uses.
         else:
             MetatileFlags = struct.unpack('<H', ts4file.read(2))[0] # Two bytes shared between three different information sets below.
             if TileDelimiter == True and MetatileFlags & 0x0FFF == 0x0400:
@@ -186,65 +182,50 @@ for x in range(MetatileCount):
             else:
                 TileID = (MetatileFlags & 0x03FF) # Up to 1024 tiles, including a blank one.
                 TileFlip = (MetatileFlags & 0x0C00) >> 10 # Second nibble controls horizontal flip (4), vertical flip (8) or both (C).
-            TilePalette = (MetatileFlags & 0xF000) >> 12 # Upper nibble controls which palette set it uses.
-            TileStartX = (TileID & 0x000F) * 8 # Maths to determine X position of metatile sheet to cut.
-            TileStartY = (((TileID & 0xFFF0) // 16) * 8) # More maths to determine Y position of metatile sheet to cut.
-        if TilesetFlags & 0x0001 == 1:
-            CropImage = sprfile.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8)) # Grabbing the right tile.
-        else:
-            if TilePalette == 0:
-                CropImage = sprfile0.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8)) # Grabbing the right tile from the first paletted tile sheet.
-            elif TilePalette == 1:
-                CropImage = sprfile1.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8)) # Or the second.
-            elif TilePalette == 2:
-                CropImage = sprfile2.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8)) # Or the third. You know the drill.
-            elif TilePalette == 3:
-                CropImage = sprfile3.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 4:
-                CropImage = sprfile4.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 5:
-                CropImage = sprfile5.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 6:
-                CropImage = sprfile6.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 7:
-                CropImage = sprfile7.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 8:
-                CropImage = sprfile8.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 9:
-                CropImage = sprfile9.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 10:
-                CropImage = sprfileA.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 11:
-                CropImage = sprfileB.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 12:
-                CropImage = sprfileC.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 13:
-                CropImage = sprfileD.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 14:
-                CropImage = sprfileE.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8))
-            elif TilePalette == 15:
-                CropImage = sprfileF.crop((TileStartX, TileStartY, TileStartX + 8, TileStartY + 8)) # Or the sixteenth. I'm sure there's a better way to go about this, but sometimes redundancy just works.
-        if TileFlip == 1:
-            CropImage = CropImage.transpose(Image.FLIP_LEFT_RIGHT) # A nibble of "4" means the tile is flipped horizontally.
-        elif TileFlip == 2:
-            CropImage = CropImage.transpose(Image.FLIP_TOP_BOTTOM) # A nibble of "8" means the tile is flipped vertically.
-        elif TileFlip == 3:
-            CropImage = CropImage.transpose(Image.FLIP_LEFT_RIGHT) # A nibble of "C" means the tile is flipped both horizontally...
-            CropImage = CropImage.transpose(Image.FLIP_TOP_BOTTOM) # ...and vertically.
-        if y == 0:
-            TileImage.paste(CropImage, ((MetatilePasteX * 16), (MetatilePasteY * 16)), mask=0) # Pasting the upper-left quadrant.
-        elif y == 1:
-            TileImage.paste(CropImage, ((MetatilePasteX * 16) + 8, (MetatilePasteY * 16)), mask=0) # Pasting the upper-right quadrant.
-        elif y == 2:
-            TileImage.paste(CropImage, ((MetatilePasteX * 16), (MetatilePasteY * 16) + 8), mask=0) # Pasting the lower-left quadrant.
-        elif y == 3:
-            TileImage.paste(CropImage, ((MetatilePasteX * 16) + 8, (MetatilePasteY * 16) + 8), mask=0) # Pasting the lower-right quadrant.
+            TilePalette = (MetatileFlags & 0xF000) >> 8 # Upper nibble controls which palette set it uses.
+        if TileID != 0xCCCC:
+            TileRet = ts4file.tell()
+            # Didj tilesets have 0xCCCC as an "end of file" identifier.
+            if TilesetFlags & 0x0001 == 1:
+                ts4file.seek(TileOffset + (TileID * 0x40), 0)
+                CropImage = Image.frombuffer('L', (8,8), ts4file.read(0x40), 'raw', 'L', 0, 1)
+            else:
+                ts4file.seek(TileOffset + (TileID * 0x20), 0)
+                TempTile = bytearray()
+                for x in range(32):
+                    TileByte = struct.unpack('<B', ts4file.read(1))[0]
+                    TileByteA = (TileByte & 0x0F) + TilePalette
+                    if TileByteA & 0x0F == 0:
+                        TileByteA = 0 # Use index 0 for a global transparency instead of that line's specific transparency value.
+                    TileByteB = ((TileByte & 0xF0) >> 4) + TilePalette
+                    if TileByteB & 0x0F == 0:
+                        TileByteB = 0 # Use index 0 for a global transparency instead of that line's specific transparency value.
+                    TempTile.append(TileByteA)
+                    TempTile.append(TileByteB)
+                CropImage = Image.frombuffer('L', (8,8), TempTile, 'raw', 'L', 0, 1)
+            if TileFlip == 1:
+                CropImage = CropImage.transpose(Image.FLIP_LEFT_RIGHT) # A nibble of "4" means the tile is flipped horizontally.
+            elif TileFlip == 2:
+                CropImage = CropImage.transpose(Image.FLIP_TOP_BOTTOM) # A nibble of "8" means the tile is flipped vertically.
+            elif TileFlip == 3:
+                CropImage = CropImage.transpose(Image.FLIP_LEFT_RIGHT) # A nibble of "C" means the tile is flipped both horizontally...
+                CropImage = CropImage.transpose(Image.FLIP_TOP_BOTTOM) # ...and vertically.
+            if y == 0:
+                TileImage.paste(CropImage, ((MetatilePasteX * 16), (MetatilePasteY * 16)), mask=0) # Pasting the upper-left quadrant.
+            elif y == 1:
+                TileImage.paste(CropImage, ((MetatilePasteX * 16) + 8, (MetatilePasteY * 16)), mask=0) # Pasting the upper-right quadrant.
+            elif y == 2:
+                TileImage.paste(CropImage, ((MetatilePasteX * 16), (MetatilePasteY * 16) + 8), mask=0) # Pasting the lower-left quadrant.
+            elif y == 3:
+                TileImage.paste(CropImage, ((MetatilePasteX * 16) + 8, (MetatilePasteY * 16) + 8), mask=0) # Pasting the lower-right quadrant.
+            ts4file.seek(TileRet, 0)
     MetatilePasteX = MetatilePasteX + 1 # Shift right by 1 metatile.
     if MetatilePasteX == 16:
         MetatilePasteX = 0 # We've reached the edge, so we reset and...
         MetatilePasteY = MetatilePasteY + 1 # ...move onto the next line.
 
 outfile = (TilesetName + '_metatile.png') # Setting up the file path.
+TileImage.putpalette(TS4Palette)
 TileImage.save(outfile) # Saving the file.
 print("Saved to " + outfile) # We did the thing.
 
