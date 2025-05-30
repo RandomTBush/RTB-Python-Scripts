@@ -158,10 +158,10 @@ if UseGBAROM == False and ANMFormat == 5:
     anmfile.seek(512, 0) # LeapFrog Didj has a 0x200 palette block at the beginning of its .ANM files, which is considered part of the file for its offset calculations.
 else: 
     anmfile.seek(SpriteStart, 0) # And now we start reading the .ANM / ROM file.
-FrameFlags = struct.unpack('<H', anmfile.read(2))[0] # Either 0x0000, 0x0F00 or 0x8000?
-FrameMaxPieces = struct.unpack('<H', anmfile.read(2))[0] # Most amount of pieces used for a single frame.
-FrameMaxBytes = struct.unpack('<H', anmfile.read(2))[0] # Most amount of bytes used for a single frame's tiles.
-FrameTotal = struct.unpack('<H', anmfile.read(2))[0] # How many frames for the respective sprite set.
+FrameFlags = struct.unpack('<H', anmfile.read(2))[0] # 0x0000 (16-colour) and 0x8000 (256-colour), or 0x0F00 (16-colour) and 0xFF00 (256-colour).
+FrameMaxPieces = struct.unpack('<H', anmfile.read(2))[0] # a.k.a "wObjMax". Most amount of pieces used for a single frame.
+FrameMaxBytes = struct.unpack('<H', anmfile.read(2))[0] # a.k.a "wSizeMax". Most amount of bytes used for a single frame's tiles.
+FrameTotal = struct.unpack('<H', anmfile.read(2))[0] # a.k.a "wFrameCount". How many frames for the respective sprite set.
 if ANMFormat == 1:
     anmfile.seek(8, 1) # The Scorpion King has two extra sets of bytes in its header.
 SpriteTileStart = (struct.unpack('<L', anmfile.read(4))[0] + SpriteStart) # Relative position from the "SpriteStart" value above (or 0 for a .ANM file) where the tile graphics start.
@@ -197,8 +197,8 @@ for x in range(FrameTotal):
     elif ANMFormat == 4:
         anmfile.seek(56, 1) # ...while other DS games have an extra 32 bytes instead.
     else:
-        anmfile.seek(24, 1) # Skipping past what I presume is bounding box information, this isn't necessary for assembly.
-    PieceCount = struct.unpack('<H', anmfile.read(2))[0] # How many pieces the sprites are made up of.
+        anmfile.seek(24, 1) # Bounding boxes. In order: X1 (X min), X2 (X max), Y1 (Y min), Y2 (Y max). Three short values for each (so X1 0, X1 1, X1 2, and so on).
+    PieceCount = struct.unpack('<H', anmfile.read(2))[0] # a.k.a "Cuts". How many pieces the sprites are made up of.
     for s in range(PieceCount):
         PivotX[s] = struct.unpack('<h', anmfile.read(2))[0] # Signed value for the X position offsets of each piece are stored all in a row...
     for s in range(PieceCount):
@@ -251,7 +251,7 @@ for x in range(FrameTotal):
         TilePasteX = 0; TilePasteY = 0 # Initializing values for chunk assembly.
         TileImage = Image.new('P', (TileWidth[s] * 8, TileHeight[s] * 8), (0, 0, 0, 255)) # Initializing the assembled tile chunk in memory.
         for t in range(TileWidth[s] * TileHeight[s]):
-            if PieceSize[s] & 0x8000 == 0x8000:
+            if PieceSize[s] & 0x8000 == 0x8000 or FrameFlags == 0x8000:
                 CropImage = Image.frombuffer('L', (8,8), anmfile.read(0x40), 'raw', 'L', 0, 1)
             else:
                 TempTile = bytearray()

@@ -106,19 +106,19 @@ ScreenHeight = struct.unpack('<H', scrfile.read(2))[0] # How many screens tall i
 ScreenCount = struct.unpack('<H', scrfile.read(2))[0] # How many unique screens are in the map. First screen is always blank, so two is technically the minimum unless it's empty.
 if LYRFormat == 0:
     ScreenUnkA = struct.unpack('<H', scrfile.read(2))[0] # Count?
-    ScreenUnkB = struct.unpack('<H', scrfile.read(2))[0] # ???
+    ScreenTypesID = struct.unpack('<H', scrfile.read(2))[0] # File number of "TYPES.TYP".
     ScreenTilesetID = struct.unpack('<H', scrfile.read(2))[0] # File number of the tileset used.
     ScreenUnkD = struct.unpack('<H', scrfile.read(2))[0] # Always 0xCCCC?
 elif LYRFormat == 1:
     ScreenUnkA = struct.unpack('<H', scrfile.read(2))[0] # ???
-    ScreenUnkB = struct.unpack('<H', scrfile.read(2))[0] # ???
+    ScreenTypesID = struct.unpack('<H', scrfile.read(2))[0] # File number of "TYPES.TYP".
     ScreenUnkC = struct.unpack('<H', scrfile.read(2))[0] # ???
     ScreenTilesetID = struct.unpack('<H', scrfile.read(2))[0] # File number of the tileset used.
 else:
     ScreenUnkCountA = struct.unpack('<H', scrfile.read(2))[0] # ???
     ScreenUnkCountB = struct.unpack('<H', scrfile.read(2))[0] # ???
     ScreenUnkCountC = struct.unpack('<H', scrfile.read(2))[0] # ???
-    ScreenUnkIDA = struct.unpack('<H', scrfile.read(2))[0] # Collision map identifier?
+    ScreenTypesID = struct.unpack('<H', scrfile.read(2))[0] # File number of "TYPES.TYP".
     ScreenUnkIDB = struct.unpack('<H', scrfile.read(2))[0] # ???
     ScreenTilesetID = struct.unpack('<H', scrfile.read(2))[0] # File number of the tileset used.
 
