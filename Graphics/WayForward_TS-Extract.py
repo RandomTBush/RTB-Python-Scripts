@@ -87,6 +87,9 @@ RawPalette = True # Set this to True to read palette values as multiples of 8 (0
 # The Batman: Strength in Numbers
 # Word Chasers
 # --------------------------------------------------------------------------------
+# LeapFrog Leapster Explorer [Use TSFormat = 3]:
+# SpongeBob SquarePants: Fists of Foam
+# --------------------------------------------------------------------------------
 # BROKEN TILESETS:
 # Justice League Heroes: The Flash = 371
 # Looney Tunes: Double Pack - Dizzy Driving / Acme Antics = 190 and 192

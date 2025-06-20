@@ -85,6 +85,9 @@ ScreenStart = 0x96B074 # Offset to the start of the screen data in a GBA ROM. Ig
 # The Batman: Strength in Numbers
 # Word Chasers
 # --------------------------------------------------------------------------------
+# LeapFrog Leapster Explorer [Use LYRFormat = 3]:
+# SpongeBob SquarePants: Fists of Foam
+# --------------------------------------------------------------------------------
 # Everything below this line should be left alone.
 
 if UseGBAROM == False:

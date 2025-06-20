@@ -90,6 +90,9 @@ SpriteStart = 0x34E368 # Offset to the start of animation data in a GBA ROM, loc
 # The Batman: Strength in Numbers
 # Word Chasers
 # --------------------------------------------------------------------------------
+# LeapFrog Leapster Explorer [Use ANMFormat = 5]:
+# SpongeBob SquarePants: Fists of Foam
+# --------------------------------------------------------------------------------
 # Everything below this line should be left alone.
 
 if PaletteNum < 0 or PaletteNum > 15:
