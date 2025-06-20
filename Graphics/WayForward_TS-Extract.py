@@ -5,18 +5,19 @@ import glob
 import struct
 from PIL import Image, ImagePalette
 
-# WayForward GBA/DS/LeapFrog Didj tileset (*.TS4 / *.TS8) metatile extraction script written by Random Talking Bush.
+# WayForward GBA/DS/LeapFrog Didj/Leapster tileset (*.TS4 / *.TS8) metatile extraction script written by Random Talking Bush.
 # Based only slightly on onepill's TextureUnpacker script: https://github.com/onepill/texture_unpacker_scirpt
 
-TSFormat = 1 # See the list below for which value should be used for the game you're ripping from.
+TSFormat = 0 # See the list below for which value should be used for the game you're ripping from.
 TilesetName = "365" # The name of the tileset TS4/TS8 file, minus extension. Will also be the exported image's filename with a "_metatile" suffix added. (Example: "363" and "365" are for the Bramble Maze's background and foreground .TS4 filenames respectively when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
-SceneName = "362" # The name of the .SCN or .PAL file to use the palette from, minus extension. Leave blank to use a grayscale palette. (Example: "362" is filename for the Bramble Maze scene when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
+SceneName = "362" # The name of the .SCN or .PAL file to use the palette from, minus extension. Leave blank to use a grayscale palette. (Example: "362" is filename for the Bramble Maze scene when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.) Ignored when TSFormat = 4 (Leapster sprites have no separate palettes).
 
 UseGBAROM = False # Change this to True to read from a GBA ROM instead of a .TS4/.TS8 file. Make sure both the "ROMName" and "TilesetStart" lines below are filled in correctly. For experts only -- you're better off using my QuickBMS scripts to unpack the ROM files instead.
 ROMName = "Shantae.gba" # Game Boy Advance ROM file needed to extract tile data. Ignored when UseGBAROM is False (it uses the "TilesetName" above instead).
 TilesetStart = 0x962774 # Offset to the start of metatile data in a GBA ROM. Ignored when UseGBAROM is False. (Example: 0x962774 is the offset to the Bramble Maze's foreground .TS4 in Shantae Advance: Risky Revolution.)
 SceneStart = 0x95C5DC # Offset to the start of scene data in a GBA ROM. Ignored when UseGBAROM is False. (Example: 0x95C5DC is the offset to the Bramble Maze's SCN file in Shantae Advance: Risky Revolution.)
 TileDelimiter = False # Debug option for GBA tilesets with more than 1024 tiles (see "BROKEN TILESETS" section below). This will start ignoring the tile flip flags as soon as it detects a tile with ID 0x0400 (which would correspond to a horizontally-flipped blank tile). This will not "repair" the tileset, but it will make the last section at least *somewhat* legible.
+RawPalette = True # Set this to True to read palette values as multiples of 8 (0, 8, 16, etc. with max of 248 for DS or 240 for Leapster). Set this to False to recalculate them to 255 maximum like most emulators would display.
 
 # Instructions on how to use this script:
 # 1. Install both Python (either 2 or 3, both work) and Pillow: https://github.com/python-pillow/Pillow
@@ -73,9 +74,18 @@ TileDelimiter = False # Debug option for GBA tilesets with more than 1024 tiles 
 # SpongeBob SquarePants: Creature from the Krusty Krab      [Set TSFormat = 1]
 # Thor: God of Thunder                                      [Set TSFormat = 2]
 # Where the Wild Things Are                                 [Set TSFormat = 2]
-# LeapFrog Didj:
-# Nicktoons: Android Invasion                               [Set TSFormat = 3]
-# SpongeBob SquarePants: Fists of Foam                      [Set TSFormat = 3]
+# --------------------------------------------------------------------------------
+# LeapFrog Didj [Both games use TSFormat = 3]:
+# Nicktoons: Android Invasion
+# SpongeBob SquarePants: Fists of Foam
+# --------------------------------------------------------------------------------
+# LeapFrog Leapster [All games use TSFormat = 4]:
+# Cosmic Math
+# Letterpillar
+# Number Raiders
+# The Batman: Multiply, Divide and Conquer
+# The Batman: Strength in Numbers
+# Word Chasers
 # --------------------------------------------------------------------------------
 # BROKEN TILESETS:
 # Justice League Heroes: The Flash = 371
@@ -106,48 +116,57 @@ else:
     else:
         ts4file = open(ROMName, "rb") # Opens a ROM file needed to extract tileset data, see the above note for the "TilesetStart" offset.
 
-if UseGBAROM == False and TSFormat == 3:
-    # LeapFrog Didj has a 0x200 palette block at the beginning of its .TS4/.TS8 files, which is considered part of the file for its offset calculations.
-    print("Didj format tileset, using internal palette.")
-    ts4file.seek(0, 0) # Start reading the TS4/TS8 file.
-    TS4Palette = bytearray()
-    # I am doing it this way for the sake of "raw" palettes.
-    for x in range(256):
-        PaletteBytes = struct.unpack('<H', ts4file.read(2))[0]
-        PaletteByteA = ((PaletteBytes & 0x001F)) * 8
-        PaletteByteB = ((PaletteBytes & 0x03E0) >> 5) * 8
-        PaletteByteC = ((PaletteBytes & 0x7C00) >> 10) * 8
-        TS4Palette.append(PaletteByteA)
-        TS4Palette.append(PaletteByteB)
-        TS4Palette.append(PaletteByteC)
-else: 
-    ts4file.seek(TilesetStart, 0) # Start reading the .TS4 / .TS8 / ROM file.
-    if os.path.exists(SceneName + ".pal") or os.path.exists(SceneName + ".scn"):
-        if os.path.exists(SceneName + ".pal"):
-            scnfile = open(SceneName + ".pal", "rb") # Opens a .PAL file to extract palette information from.
-        elif os.path.exists(SceneName + ".scn"):
-            scnfile = open(SceneName + ".scn", "rb") # Opens a .SCN file to extract palette information from.
+if TSFormat != 4:
+    if UseGBAROM == False and TSFormat == 3:
+        # LeapFrog Didj has a 0x200 palette block at the beginning of its .TS4/.TS8 files, which is considered part of the file for its offset calculations.
+        print("Didj format tileset, using internal palette.")
+        ts4file.seek(0, 0) # Start reading the TS4/TS8 file.
         TS4Palette = bytearray()
-        scnfile.seek(0, 0) # Background palettes are in the first half of the SCN file.
-        # I am doing it this way for the sake of "raw" palettes.
+        # I am doing it this way for the sake of "raw" palettes, and so that the method is compatible with both Python 2 and 3.
         for x in range(256):
-            PaletteBytes = struct.unpack('<H', scnfile.read(2))[0]
+            PaletteBytes = struct.unpack('<H', ts4file.read(2))[0]
             PaletteByteA = ((PaletteBytes & 0x001F)) * 8
             PaletteByteB = ((PaletteBytes & 0x03E0) >> 5) * 8
             PaletteByteC = ((PaletteBytes & 0x7C00) >> 10) * 8
+            if RawPalette == False:
+                PaletteByteA = PaletteByteA + ((PaletteByteA + 1) // 32)
+                PaletteByteB = PaletteByteB + ((PaletteByteB + 1) // 32)
+                PaletteByteC = PaletteByteC + ((PaletteByteC + 1) // 32)
             TS4Palette.append(PaletteByteA)
             TS4Palette.append(PaletteByteB)
             TS4Palette.append(PaletteByteC)
     else:
-        if SceneName == "":
-            print("Defaulting to grayscale palette.")
+        ts4file.seek(TilesetStart, 0) # Start reading the .TS4 / .TS8 / ROM file.
+        if os.path.exists(SceneName + ".pal") or os.path.exists(SceneName + ".scn"):
+            if os.path.exists(SceneName + ".pal"):
+                scnfile = open(SceneName + ".pal", "rb") # Opens a .PAL file to extract palette information from.
+            elif os.path.exists(SceneName + ".scn"):
+                scnfile = open(SceneName + ".scn", "rb") # Opens a .SCN file to extract palette information from.
+            scnfile.seek(0, 0) # Background palettes are in the first half of the SCN file.
+            TS4Palette = bytearray()
+            # I am doing it this way for the sake of "raw" palettes, and so that the method is compatible with both Python 2 and 3.
+            for x in range(256):
+                PaletteBytes = struct.unpack('<H', scnfile.read(2))[0]
+                PaletteByteA = ((PaletteBytes & 0x001F)) * 8
+                PaletteByteB = ((PaletteBytes & 0x03E0) >> 5) * 8
+                PaletteByteC = ((PaletteBytes & 0x7C00) >> 10) * 8
+                if RawPalette == False:
+                    PaletteByteA = PaletteByteA + ((PaletteByteA + 1) // 32)
+                    PaletteByteB = PaletteByteB + ((PaletteByteB + 1) // 32)
+                    PaletteByteC = PaletteByteC + ((PaletteByteC + 1) // 32)
+                TS4Palette.append(PaletteByteA)
+                TS4Palette.append(PaletteByteB)
+                TS4Palette.append(PaletteByteC)
         else:
-            print("Couldn't find '" + SceneName + ".scn' or '" + SceneName + ".pal', defaulting to grayscale instead.")
-        TS4Palette = bytearray() # Forcing a grayscale palette for Python 3 compatibility.
-        for x in range(256):
-            TS4Palette.append(x) 
-            TS4Palette.append(x)
-            TS4Palette.append(x)
+            if SceneName == "":
+                print("Defaulting to grayscale palette.")
+            else:
+                print("Couldn't find '" + SceneName + ".scn' or '" + SceneName + ".pal', defaulting to grayscale instead.")
+            TS4Palette = bytearray() # Forcing a grayscale palette for Python 3 compatibility.
+            for x in range(256):
+                TS4Palette.append(x) 
+                TS4Palette.append(x)
+                TS4Palette.append(x)
 
 TilesetFlags = struct.unpack('<H', ts4file.read(2))[0] # Flags. 0x0001 = 256-colour / .TS8 file, 0x0004 = LZSS-compressed, 0x0010 = ???.
 MetatileCount = struct.unpack('<H', ts4file.read(2))[0] # How many 16x16 metatiles (consisting of four 8x8 tiles) there are.
@@ -155,20 +174,28 @@ TileCount = struct.unpack('<H', ts4file.read(2))[0] # How many 8x8 tiles there a
 if TSFormat > 0:
     MetatileUnk = struct.unpack('<H', ts4file.read(2))[0] # Early GBA games don't have a fourth set of bytes in the header.
 
-if TileCount > 1024 and TSFormat < 2:
-    print("WARNING: Tileset uses GBA format and has over 1024 tiles. Expect broken metatiles.")
 if TSFormat == 2 or TSFormat == 3:
     TileOffset = (ts4file.tell() + (MetatileCount * 16)) # DS/Didj games have twice the buffer size compared to the GBA games.
+elif TSFormat == 4:
+    TileFlipRet = (ts4file.tell() + (MetatileCount * 8)) # Leapster games have an additional buffer meant for tile flip flags, after the metatile data and before the tile graphics. Store it for later.
+    TileOffset = TileFlipRet + (MetatileCount * 4) # Add the tile flip buffer to the offset as well.
 else:
     TileOffset = (ts4file.tell() + (MetatileCount * 8))
+
+if TileCount > 1024 and TSFormat < 2:
+    print("WARNING: Tileset uses GBA format and has over 1024 tiles. Expect broken metatiles.")
 
 SheetHeight = (MetatileCount & 0xFFF0) # Maths to determine how large the metatile sheet needs to be
 if (MetatileCount & 0x000F) != 0:
     SheetHeight = SheetHeight + 16 # If it's not a full line, compensate for leftovers.
 
 MetatilePasteX = 0; MetatilePasteY = 0 # Initializing values for metatile assembly.
-TileImage = Image.new('P', (256, SheetHeight), (0, 0, 0, 255)) # Initializing a paletted metatile PNG in memory.
+if TSFormat == 4:
+    TileImage = Image.new('RGBA', (256, SheetHeight), (0, 0, 0, 0)) # Initializing a full-colour metatile PNG in memory.
+else:
+    TileImage = Image.new('P', (256, SheetHeight), (0, 0, 0, 255)) # Initializing a paletted metatile PNG in memory.
 TileFix = False # In case of emergency, break glass.
+
 for x in range(MetatileCount):
     for y in range(4):
         if TSFormat == 2 or TSFormat == 3:
@@ -176,6 +203,13 @@ for x in range(MetatileCount):
             TileID = (MetatileFlags & 0x0000FFFF) # I don't know the upper limit for this (one of the largest TS4 files, FV_PF_ALL_TS4_NIGHT.ts4 from Where the Wild Things Are, goes up to 0x0875 / 2165).
             TileFlip = (MetatileFlags & 0x0C000000) >> 26 # Second nibble controls horizontal flip (4), vertical flip (8) or both (C).
             TilePalette = (MetatileFlags & 0xF0000000) >> 24 # Upper nibble controls which palette set it uses.
+        elif TSFormat == 4:
+            TileID = struct.unpack('<H', ts4file.read(2))[0] # No "flags" so to speak, simply a two-byte tile ID.
+            TileRet = ts4file.tell() # We'll be back in a sec.
+            ts4file.seek(TileFlipRet, 0) # Hop to the tile flip buffer from earlier.
+            TileFlip = (struct.unpack('<B', ts4file.read(1))[0]) >> 2 # Only values are 0x00 (none), 0x04 (horizontal flip), 0x08 (vertical flip, and 0x0C (both).
+            TileFlipRet = TileFlipRet + 1 # Add one to the offset.
+            ts4file.seek(TileRet, 0) # And back to where we were earlier.
         else:
             MetatileFlags = struct.unpack('<H', ts4file.read(2))[0] # Two bytes shared between three different information sets below.
             if TileDelimiter == True and MetatileFlags & 0x0FFF == 0x0400:
@@ -188,11 +222,32 @@ for x in range(MetatileCount):
                 TileFlip = (MetatileFlags & 0x0C00) >> 10 # Second nibble controls horizontal flip (4), vertical flip (8) or both (C).
             TilePalette = (MetatileFlags & 0xF000) >> 8 # Upper nibble controls which palette set it uses.
         if TileID != 0xCCCC:
-            TileRet = ts4file.tell()
+            if TSFormat != 4:
+                TileRet = ts4file.tell() # We'll be back in a sec.
             # Didj tilesets have 0xCCCC as an "end of file" identifier.
             if TilesetFlags & 0x0001 == 1:
-                ts4file.seek(TileOffset + (TileID * 0x40), 0)
-                CropImage = Image.frombuffer('L', (8,8), ts4file.read(0x40), 'raw', 'L', 0, 1)
+                if TSFormat != 4:
+                    ts4file.seek(TileOffset + (TileID * 0x40), 0)
+                    CropImage = Image.frombuffer('L', (8,8), ts4file.read(0x40), 'raw', 'L', 0, 1)
+                else:
+                    ts4file.seek(TileOffset + (TileID * 0x80), 0)
+                    TempTile = bytearray()
+                    for x in range(64):
+                        TileBytes = struct.unpack('<H', ts4file.read(2))[0] # Leapster uses ARGB4444, two bytes per pixel.
+                        if RawPalette == True:
+                            TileByteA = ((TileBytes & 0x0F00) >> 8) * 16 # Second "nibble" is the red value.
+                            TileByteB = ((TileBytes & 0x00F0) >> 4) * 16 # Third "nibble" is the green value.
+                            TileByteC = (TileBytes & 0x000F) * 16 # Fourth "nibble" is the blue value.
+                        else:
+                            TileByteA = ((TileBytes & 0x0F00) >> 8) + (((TileBytes & 0x0F00) >> 8) * 16) # Second "nibble" is the red value.
+                            TileByteB = ((TileBytes & 0x00F0) >> 4) + (((TileBytes & 0x00F0) >> 4) * 16) # Third "nibble" is the green value.
+                            TileByteC = (TileBytes & 0x000F) + ((TileBytes & 0x000F) * 16) # Fourth "nibble" is the blue value.
+                        TileByteD = ((((TileBytes & 0xF000) >> 12) + (((TileBytes & 0xF000) >> 12) * 16)) * -1) + 255 # First "nibble" is the alpha value. The alpha value is inverted, so we need to fix that.
+                        TempTile.append(TileByteA)
+                        TempTile.append(TileByteB)
+                        TempTile.append(TileByteC)
+                        TempTile.append(TileByteD)
+                    CropImage = Image.frombuffer('RGBA', (8,8), TempTile, 'raw', 'RGBA', 0, 1)
             else:
                 ts4file.seek(TileOffset + (TileID * 0x20), 0)
                 TempTile = bytearray()
@@ -229,7 +284,8 @@ for x in range(MetatileCount):
         MetatilePasteY = MetatilePasteY + 1 # ...move onto the next line.
 
 outfile = (TilesetName + '_metatile.png') # Setting up the file path.
-TileImage.putpalette(TS4Palette)
+if TSFormat != 4:
+    TileImage.putpalette(TS4Palette) # Load the palette (but only if it's not a Leapster TS8).
 TileImage.save(outfile) # Saving the file.
 print("Saved to " + outfile) # We did the thing.
 

@@ -5,7 +5,7 @@ import glob
 import struct
 from PIL import Image
 
-# WayForward GBA/DS/LeapFrog Didj screen / map (*.LYR) extraction script written by Random Talking Bush.
+# WayForward GBA/DS/LeapFrog Didj/Leapster screen / map (*.LYR) extraction script written by Random Talking Bush.
 # Based only slightly on onepill's TextureUnpacker script: https://github.com/onepill/texture_unpacker_scirpt
 
 LYRFormat = 0 # See the list below for which value should be used for the game you're ripping from.
@@ -76,6 +76,14 @@ ScreenStart = 0x96B074 # Offset to the start of the screen data in a GBA ROM. Ig
 # LeapFrog Didj [Both games use LYRFormat = 3]:
 # Nicktoons: Android Invasion
 # SpongeBob SquarePants: Fists of Foam
+# --------------------------------------------------------------------------------
+# LeapFrog Leapster [All games use LYRFormat = 2]:
+# Cosmic Math
+# Letterpillar
+# Number Raiders
+# The Batman: Multiply, Divide and Conquer
+# The Batman: Strength in Numbers
+# Word Chasers
 # --------------------------------------------------------------------------------
 # Everything below this line should be left alone.
 

@@ -5,16 +5,18 @@ import glob
 import struct
 from PIL import Image, ImagePalette
 
-# WayForward GBA/DS/LeapFrog Didj sprite animation (*.ANM/*.AN4/*.AN8) extraction script written by Random Talking Bush.
+# WayForward GBA/DS/LeapFrog Didj/Leapster sprite animation (*.ANM/*.AN4/*.AN8) extraction script written by Random Talking Bush.
 # Based only slightly on onepill's TextureUnpacker script: https://github.com/onepill/texture_unpacker_scirpt
+# Thanks to Dr. RNG / BLINXGLITCHES for figuring out the Leapster sprite compression.
 
-ANMFormat = 0 # See the list below for which value should be used for the game you're ripping from. Actual "version" ordering is 1 > 2 > 0 > 3 > 4 > 5, "0" was made the default due to being the most common.
+ANMFormat = 0 # See the list below for which value should be used for the game you're ripping from. Actual "version" ordering is 1 > 2 > 0 > 3 > 4 > 6 > 5, "0" was made the default due to being the most common.
 SpriteName = "20" # The name of the .ANM, .AN4 or .AN8 file, will also be the name of the folder said sprites will extract to. Ignored if UseGBAROM = True (it will use the "SpriteStart" offset instead). (Example: "20" will be Shantae's .ANM filename when using my QuickBMS script to unpack Shantae Advance: Risky Revolution.)
-SceneName = "419" # The name of the .SCN or .PAL file to use the palette from, minus extension. Leave blank to use a grayscale palette.
-PaletteNum = 1 # Use the specified palette number (from 0-15) for the exported sprites. If the sprites look off, change this number and re-export. Ignored if sprites are 8BPP / 256-colour.
+SceneName = "419" # The name of the .SCN or .PAL file to use the palette from, minus extension. Leave blank to use a grayscale palette. Ignored when ANMFormat = 6 (Leapster sprites have no separate palettes).
+PaletteNum = 1 # Use the specified palette number (from 0-15) for the exported sprites. If the sprites look off, change this number and re-export. Ignored if sprites are 8BPP / 256-colour, or when ANMFormat = 6.
 SpriteWidth = 256 # Change this and/or the next value to adjust the image dimensions of the sprite output.
 SpriteHeight = 256 # You will need to set this to a higher amount such as 384 for some of the larger sprites, or else they'll be cropped off at the edges. 256 is more than enough for most of them.
-TileBounds = False # Set this to True to use a transparent canvas for the extracted sprites instead of limiting them to their 256-colour palettes, exposing the tile edges in the process.
+TileBounds = False # Set this to True to use a transparent canvas for the extracted sprites instead of limiting them to their 256-colour palettes, exposing the tile edges in the process. Forced on when ANMFormat = 6 (Leapster sprites can have semi-transparency, and don't have "tiles" due to their variable width/height).
+RawPalette = True # Set this to True to read palette values as multiples of 8 (0, 8, 16, etc. with max of 248 for DS or 240 for Leapster). Set this to False to recalculate them to 255 maximum like most emulators would display.
 
 UseGBAROM = False # Change this to True to read from a GBA ROM instead of a .ANM file. Make sure both the "ROMName" and "SpriteStart" lines below are filled in correctly. For experts only -- you're better off using my QuickBMS scripts to unpack the ROM files instead.
 ROMName = "Shantae.gba" # Game Boy Advance ROM file needed to extract sprite data. Ignored when UseGBAROM is False (it uses the "SpriteName" above instead).
@@ -76,9 +78,17 @@ SpriteStart = 0x34E368 # Offset to the start of animation data in a GBA ROM, loc
 # Thor: God of Thunder                                      [Set ANMFormat = 4]
 # Where the Wild Things Are                                 [Set ANMFormat = 3]
 # --------------------------------------------------------------------------------
-# LeapFrog Didj:
-# Nicktoons: Android Invasion                               [Set ANMFormat = 5]
-# SpongeBob SquarePants: Fists of Foam                      [Set ANMFormat = 5]
+# LeapFrog Didj [Both games use ANMFormat = 5]:
+# Nicktoons: Android Invasion
+# SpongeBob SquarePants: Fists of Foam
+# --------------------------------------------------------------------------------
+# LeapFrog Leapster [All games use ANMFormat = 6]:
+# Cosmic Math
+# Letterpillar
+# Number Raiders
+# The Batman: Multiply, Divide and Conquer
+# The Batman: Strength in Numbers
+# Word Chasers
 # --------------------------------------------------------------------------------
 # Everything below this line should be left alone.
 
@@ -100,7 +110,6 @@ if UseGBAROM == False:
             anmfile = open(SpriteName + ".an4", "rb") # Opens a .AN4 file, uses the name listed in "SpriteName" above.
     else:
         anmfile = open(SpriteName + ".anm", "rb") # Opens a .ANM file, uses the name listed in "SpriteName" above.
-        
 else:
     if not os.path.exists(ROMName):
         print("Can't find " + ROMName + ". Check to make sure you filled in the 'ROMName' entry correctly.")
@@ -114,16 +123,20 @@ if UseGBAROM == False and ANMFormat == 5:
     print("Didj format tileset, using internal palette.")
     anmfile.seek(0, 0) # Start reading the .ANM file.
     ANMPalette = bytearray()
-    # I am doing it this way for the sake of "raw" palettes.
+    # I am doing it this way for the sake of "raw" palettes, and so that the method is compatible with both Python 2 and 3.
     for x in range(256):
         PaletteBytes = struct.unpack('<H', anmfile.read(2))[0]
         PaletteByteA = ((PaletteBytes & 0x001F)) * 8
         PaletteByteB = ((PaletteBytes & 0x03E0) >> 5) * 8
         PaletteByteC = ((PaletteBytes & 0x7C00) >> 10) * 8
+        if RawPalette == False:
+            PaletteByteA = PaletteByteA + ((PaletteByteA + 1) // 32)
+            PaletteByteB = PaletteByteB + ((PaletteByteB + 1) // 32)
+            PaletteByteC = PaletteByteC + ((PaletteByteC + 1) // 32)
         ANMPalette.append(PaletteByteA)
         ANMPalette.append(PaletteByteB)
         ANMPalette.append(PaletteByteC)
-else: 
+else:
     anmfile.seek(SpriteStart, 0) # Start reading the .ANM / ROM file.
     if os.path.exists(SceneName + ".pal") or os.path.exists(SceneName + ".scn"):
         if os.path.exists(SceneName + ".pal"):
@@ -133,12 +146,16 @@ else:
             scnfile = open(SceneName + ".scn", "rb") # Opens a .SCN file to extract palette information from.
             scnfile.seek(0x200, 0) # Sprite palettes are in the latter half of the SCN file.
         ANMPalette = bytearray()
-        # I am doing it this way for the sake of "raw" palettes.
+        # I am doing it this way for the sake of "raw" palettes, and so that the method is compatible with both Python 2 and 3.
         for x in range(256):
             PaletteBytes = struct.unpack('<H', scnfile.read(2))[0]
             PaletteByteA = ((PaletteBytes & 0x001F)) * 8
             PaletteByteB = ((PaletteBytes & 0x03E0) >> 5) * 8
             PaletteByteC = ((PaletteBytes & 0x7C00) >> 10) * 8
+            if RawPalette == False:
+                PaletteByteA = PaletteByteA + ((PaletteByteA + 1) // 32)
+                PaletteByteB = PaletteByteB + ((PaletteByteB + 1) // 32)
+                PaletteByteC = PaletteByteC + ((PaletteByteC + 1) // 32)
             ANMPalette.append(PaletteByteA)
             ANMPalette.append(PaletteByteB)
             ANMPalette.append(PaletteByteC)
@@ -156,7 +173,7 @@ else:
 FrameOffset = {}; FrameStart = {}; FrameLength = {} # Initializing the arrays...
 if UseGBAROM == False and ANMFormat == 5:
     anmfile.seek(512, 0) # LeapFrog Didj has a 0x200 palette block at the beginning of its .ANM files, which is considered part of the file for its offset calculations.
-else: 
+else:
     anmfile.seek(SpriteStart, 0) # And now we start reading the .ANM / ROM file.
 FrameFlags = struct.unpack('<H', anmfile.read(2))[0] # 0x0000 (16-colour) and 0x8000 (256-colour), or 0x0F00 (16-colour) and 0xFF00 (256-colour).
 FrameMaxPieces = struct.unpack('<H', anmfile.read(2))[0] # a.k.a "wObjMax". Most amount of pieces used for a single frame.
@@ -204,90 +221,129 @@ for x in range(FrameTotal):
     for s in range(PieceCount):
         PivotY[s] = struct.unpack('<h', anmfile.read(2))[0] # ...and *then* all of the Y position offsets in a row. So "XXXXYYYY", not "XYXYXYXY" in other words.
     for s in range(PieceCount):
-        PieceFlags = struct.unpack('<H', anmfile.read(2))[0] # Two bytes shared between two different information sets below.
-        if ANMFormat == 1:
-            TileStart[s] = PieceFlags & 0x00FF # Bits 1-8 count up to 256 tile IDs.
-            PieceSize[s] = (PieceFlags & 0x1F00) << 2 # Bits 9-12 determine chunk sizes. Bit-shift forward so we don't have to make a second set of checks. TODO: Are bits 13-16 used in The Scorpion King?
-        elif ANMFormat == 2:
-            TileStart[s] = PieceFlags & 0x007F # Bits 1-7 count up to 128 tile IDs.
-            PieceSize[s] = (PieceFlags & 0x0F80) << 3 # Bits 8-11 determine chunk sizes. Bit-shift forward so we don't have to make a second set of checks. TODO: Are bits 12-16 used in Rescue Heroes?
+        if ANMFormat != 6:
+            PieceFlags = struct.unpack('<H', anmfile.read(2))[0] # Two bytes shared between two different information sets below.
+            if ANMFormat == 1:
+                TileStart[s] = PieceFlags & 0x00FF # Bits 1-8 count up to 256 tile IDs.
+                PieceSize[s] = (PieceFlags & 0x1F00) << 2 # Bits 9-12 determine chunk sizes. Bit-shift forward so we don't have to make a second set of checks. TODO: Are bits 13-16 used in The Scorpion King?
+            elif ANMFormat == 2:
+                TileStart[s] = PieceFlags & 0x007F # Bits 1-7 count up to 128 tile IDs.
+                PieceSize[s] = (PieceFlags & 0x0F80) << 3 # Bits 8-11 determine chunk sizes. Bit-shift forward so we don't have to make a second set of checks. TODO: Are bits 12-16 used in Rescue Heroes?
+            else:
+                TileStart[s] = PieceFlags & 0x03FF # Bits 1-10 count up to 1024 tile IDs.
+                PieceSize[s] = (PieceFlags & 0xFC00) # Bits 11-14 determine chunk sizes, bit 15 = uses second palette, bit 16 = 256-colour.
+            if PieceSize[s] & 0x3C00 == 0x0000:
+                TileWidth[s] = 1; TileHeight[s] = 1 # 1x1 tile chunk for a 8x8 sprite.
+            elif PieceSize[s] & 0x3C00 == 0x0400:
+                TileWidth[s] = 2; TileHeight[s] = 1 # 2x1 tile chunk for a 16x8 sprite.
+            elif PieceSize[s] & 0x3C00 == 0x0800:
+                TileWidth[s] = 1; TileHeight[s] = 2 # 1x2 tile chunk for a 8x16 sprite.
+            elif PieceSize[s] & 0x3C00 == 0x1000:
+                TileWidth[s] = 2; TileHeight[s] = 2 # 2x2 tile chunk for a 16x16 sprite.
+            elif PieceSize[s] & 0x3C00 == 0x1400:
+                TileWidth[s] = 4; TileHeight[s] = 1 # 4x1 tile chunk for a 32x8 sprite.
+            elif PieceSize[s] & 0x3C00 == 0x1800:
+                TileWidth[s] = 1; TileHeight[s] = 4 # 1x4 tile chunk for a 8x32 sprite.
+            elif PieceSize[s] & 0x3C00 == 0x2000:
+                TileWidth[s] = 4; TileHeight[s] = 4 # 4x4 tile chunk for a 32x32 sprite (most common).
+            elif PieceSize[s] & 0x3C00 == 0x2400:
+                TileWidth[s] = 4; TileHeight[s] = 2 # 4x2 tile chunk for a 32x16 sprite.
+            elif PieceSize[s] & 0x3C00 == 0x2800:
+                TileWidth[s] = 2; TileHeight[s] = 4 # 2x4 tile chunk for a 16x32 sprite.
+            elif PieceSize[s] & 0x3C00 == 0x3000:
+                TileWidth[s] = 8; TileHeight[s] = 8 # 8x8 tile chunk for a 64x64 sprite.
+            elif PieceSize[s] & 0x3C00 == 0x3400:
+                TileWidth[s] = 8; TileHeight[s] = 4 # 8x4 tile chunk for a 64x32 sprite.
+            elif PieceSize[s] & 0x3C00 == 0x3800:
+                TileWidth[s] = 4; TileHeight[s] = 8 # 4x8 tile chunk for a 32x64 sprite.
+            else:
+                print("Unknown piece size at " + str(hex(anmfile.tell())) + " (" + str(hex(PieceSize[s])) + ")!")
         else:
-            TileStart[s] = PieceFlags & 0x03FF # Bits 1-10 count up to 1024 tile IDs.
-            PieceSize[s] = (PieceFlags & 0xFC00) # Bits 11-14 determine chunk sizes, bit 15 = uses second palette, bit 16 = 256-colour.
-        if PieceSize[s] & 0x3C00 == 0x0000:
-            TileWidth[s] = 1; TileHeight[s] = 1 # 1x1 tile chunk for a 8x8 sprite.
-        elif PieceSize[s] & 0x3C00 == 0x0400:
-            TileWidth[s] = 2; TileHeight[s] = 1 # 2x1 tile chunk for a 16x8 sprite.
-        elif PieceSize[s] & 0x3C00 == 0x0800:
-            TileWidth[s] = 1; TileHeight[s] = 2 # 1x2 tile chunk for a 8x16 sprite.
-        elif PieceSize[s] & 0x3C00 == 0x1000:
-            TileWidth[s] = 2; TileHeight[s] = 2 # 2x2 tile chunk for a 16x16 sprite.
-        elif PieceSize[s] & 0x3C00 == 0x1400:
-            TileWidth[s] = 4; TileHeight[s] = 1 # 4x1 tile chunk for a 32x8 sprite.
-        elif PieceSize[s] & 0x3C00 == 0x1800:
-            TileWidth[s] = 1; TileHeight[s] = 4 # 1x4 tile chunk for a 8x32 sprite.
-        elif PieceSize[s] & 0x3C00 == 0x2000:
-            TileWidth[s] = 4; TileHeight[s] = 4 # 4x4 tile chunk for a 32x32 sprite (most common).
-        elif PieceSize[s] & 0x3C00 == 0x2400:
-            TileWidth[s] = 4; TileHeight[s] = 2 # 4x2 tile chunk for a 32x16 sprite.
-        elif PieceSize[s] & 0x3C00 == 0x2800:
-            TileWidth[s] = 2; TileHeight[s] = 4 # 2x4 tile chunk for a 16x32 sprite.
-        elif PieceSize[s] & 0x3C00 == 0x3000:
-            TileWidth[s] = 8; TileHeight[s] = 8 # 8x8 tile chunk for a 64x64 sprite.
-        elif PieceSize[s] & 0x3C00 == 0x3400:
-            TileWidth[s] = 8; TileHeight[s] = 4 # 8x4 tile chunk for a 64x32 sprite.
-        elif PieceSize[s] & 0x3C00 == 0x3800:
-            TileWidth[s] = 4; TileHeight[s] = 8 # 4x8 tile chunk for a 32x64 sprite.
-        else:
-            print("Unknown piece size at " + str(hex(anmfile.tell())) + " (" + str(hex(PieceSize[s])) + ")!")
+            TileWidth[s] = struct.unpack('<B', anmfile.read(1))[0] # Leapster sprites only consist of one piece, and have one byte apiece for width and height respectively.
+            TileHeight[s] = struct.unpack('<B', anmfile.read(1))[0]
 
-    if TileBounds == True:
+    if TileBounds == True or ANMFormat == 6:
         result_image = Image.new('RGBA', (SpriteWidth, SpriteHeight), (0, 0, 0, 0)) # Initializing the assembled (transparent) sprite PNG in memory.
     else:
         result_image = Image.new('P', (SpriteWidth, SpriteHeight), (0, 0, 0, 255)) # Initializing the assembled (palettized) sprite PNG in memory.
     for s in range(PieceCount):
-        anmfile.seek(FrameStart[x] + (TileStart[s] * 32), 0) # Jump to the beginning of the piece's tiles.
-        # print(str(PivotX[s]) + "," + str(PivotY[s]) + " | " + str(hex(PieceSize[s])) + " | " + str(TileStart[s])) # Uncomment to watch the script print piece information as it builds the sprites.
-        TilePasteX = 0; TilePasteY = 0 # Initializing values for chunk assembly.
-        TileImage = Image.new('P', (TileWidth[s] * 8, TileHeight[s] * 8), (0, 0, 0, 255)) # Initializing the assembled tile chunk in memory.
-        for t in range(TileWidth[s] * TileHeight[s]):
-            if PieceSize[s] & 0x8000 == 0x8000 or FrameFlags == 0x8000:
-                CropImage = Image.frombuffer('L', (8,8), anmfile.read(0x40), 'raw', 'L', 0, 1)
-            else:
-                TempTile = bytearray()
-                for y in range(32):
-                    TileByte = struct.unpack('<B', anmfile.read(1))[0]
-                    if PieceSize[s] & 0x4000 == 0x4000:
-                        TileByteA = (TileByte & 0x0F) + ((PaletteNum + 1)* 16)
-                        if TileByteA & 0x0F == 0:
-                            TileByteA = 0 # Use index 0 for a global transparency instead of that line's specific transparency value.
-                        TileByteB = ((TileByte & 0xF0) >> 4) + ((PaletteNum + 1) * 16)
-                        if TileByteB & 0x0F == 0:
-                            TileByteB = 0 # Use index 0 for a global transparency instead of that line's specific transparency value.
+        if ANMFormat != 6:
+            anmfile.seek(FrameStart[x] + (TileStart[s] * 32), 0) # Jump to the beginning of the piece's tiles.
+            # print(str(PivotX[s]) + "," + str(PivotY[s]) + " | " + str(hex(PieceSize[s])) + " | " + str(TileStart[s])) # Uncomment to watch the script print piece information as it builds the sprites.
+            TilePasteX = 0; TilePasteY = 0 # Initializing values for chunk assembly.
+            TileImage = Image.new('P', (TileWidth[s] * 8, TileHeight[s] * 8), (0, 0, 0, 255)) # Initializing the assembled tile chunk in memory.
+            for t in range(TileWidth[s] * TileHeight[s]):
+                if PieceSize[s] & 0x8000 == 0x8000 or FrameFlags == 0x8000:
+                    CropImage = Image.frombuffer('L', (8,8), anmfile.read(0x40), 'raw', 'L', 0, 1)
+                else:
+                    TempTile = bytearray()
+                    for y in range(32):
+                        TileByte = struct.unpack('<B', anmfile.read(1))[0]
+                        if PieceSize[s] & 0x4000 == 0x4000:
+                            TileByteA = (TileByte & 0x0F) + ((PaletteNum + 1)* 16)
+                            if TileByteA & 0x0F == 0:
+                                TileByteA = 0 # Use index 0 for a global transparency instead of that line's specific transparency value.
+                            TileByteB = ((TileByte & 0xF0) >> 4) + ((PaletteNum + 1) * 16)
+                            if TileByteB & 0x0F == 0:
+                                TileByteB = 0 # Use index 0 for a global transparency instead of that line's specific transparency value.
+                        else:
+                            TileByteA = (TileByte & 0x0F) + (PaletteNum * 16)
+                            if TileByteA & 0x0F == 0:
+                                TileByteA = 0 # Use index 0 for a global transparency instead of that line's specific transparency value.
+                            TileByteB = ((TileByte & 0xF0) >> 4) + (PaletteNum * 16)
+                            if TileByteB & 0x0F == 0:
+                                TileByteB = 0 # Use index 0 for a global transparency instead of that line's specific transparency value.
+                        TempTile.append(TileByteA)
+                        TempTile.append(TileByteB)
+                    CropImage = Image.frombuffer('L', (8,8), TempTile, 'raw', 'L', 0, 1)
+                if TileBounds == True:
+                    TileImage.putpalette(ANMPalette) # If using the "TileBounds" option, apply the palette before pasting it instead of after.
+                TileImage.paste(CropImage, (TilePasteX * 8, TilePasteY * 8), mask=0) # Pasting the tile in the right spot.
+                TilePasteX = TilePasteX + 1 # Shift right by 1 tile.
+                if TilePasteX == TileWidth[s]:
+                    TilePasteX = 0 # We've reached the edge, so we reset and...
+                    TilePasteY = TilePasteY + 1 # ...move onto the next line.
+        else:
+            anmfile.seek(SpriteTileStart, 0) # Jump to the beginning of the sprite.
+            # print(str(PivotX[s]) + "," + str(PivotY[s]) + " | " + str(TileWidth[s]) + "x" + str(TileHeight[s])) # Uncomment to watch the script print piece information as it builds the sprites.
+            TempTile = bytearray() # Set up a buffer for the decompressed sprite data.
+            for y in range(TileHeight[s]):
+                PadBytes = struct.unpack('<B', anmfile.read(1))[0] # How many pixels are blank (from left side). Right side is calculated via remaining pixels.
+                SpriteBytes = struct.unpack('<B', anmfile.read(1))[0] # How many pixels to copy over after padding.
+                for z in range(PadBytes):
+                     TempTile.append(0) # Need to do this four times, one for each R/G/B/A value.
+                     TempTile.append(0)
+                     TempTile.append(0)
+                     TempTile.append(0)
+                for z in range(SpriteBytes):
+                    TileBytes = struct.unpack('<H', anmfile.read(2))[0] # Leapster uses ARGB4444, two bytes per pixel.
+                    if RawPalette == True:
+                        TileByteA = ((TileBytes & 0x0F00) >> 8) * 16 # Second "nibble" is the red value.
+                        TileByteB = ((TileBytes & 0x00F0) >> 4) * 16 # Third "nibble" is the green value.
+                        TileByteC = (TileBytes & 0x000F) * 16 # Fourth "nibble" is the blue value.
                     else:
-                        TileByteA = (TileByte & 0x0F) + (PaletteNum * 16)
-                        if TileByteA & 0x0F == 0:
-                            TileByteA = 0 # Use index 0 for a global transparency instead of that line's specific transparency value.
-                        TileByteB = ((TileByte & 0xF0) >> 4) + (PaletteNum * 16)
-                        if TileByteB & 0x0F == 0:
-                            TileByteB = 0 # Use index 0 for a global transparency instead of that line's specific transparency value.
+                        TileByteA = ((TileBytes & 0x0F00) >> 8) + (((TileBytes & 0x0F00) >> 8) * 16) # Second "nibble" is the red value.
+                        TileByteB = ((TileBytes & 0x00F0) >> 4) + (((TileBytes & 0x00F0) >> 4) * 16) # Third "nibble" is the green value.
+                        TileByteC = (TileBytes & 0x000F) + ((TileBytes & 0x000F) * 16) # Fourth "nibble" is the blue value.
+                    TileByteD = ((((TileBytes & 0xF000) >> 12) + (((TileBytes & 0xF000) >> 12) * 16)) * -1) + 255 # First "nibble" is the alpha value. The alpha value is inverted, so we need to fix that.
                     TempTile.append(TileByteA)
                     TempTile.append(TileByteB)
-                CropImage = Image.frombuffer('L', (8,8), TempTile, 'raw', 'L', 0, 1)
-            if TileBounds == True:
-                TileImage.putpalette(ANMPalette) # If using the "TileBounds" option, apply the palette before pasting it instead of after.
-            TileImage.paste(CropImage, (TilePasteX * 8, TilePasteY * 8), mask=0) # Pasting the tile in the right spot.
-            TilePasteX = TilePasteX + 1 # Shift right by 1 tile.
-            if TilePasteX == TileWidth[s]:
-                TilePasteX = 0 # We've reached the edge, so we reset and...
-                TilePasteY = TilePasteY + 1 # ...move onto the next line.
+                    TempTile.append(TileByteC)
+                    TempTile.append(TileByteD)
+                for z in range(TileWidth[s] - PadBytes - SpriteBytes):
+                     TempTile.append(0) # Need to do this four times, one for each R/G/B/A value.
+                     TempTile.append(0)
+                     TempTile.append(0)
+                     TempTile.append(0)
+            SpriteTileStart = anmfile.tell() # Updating the offset for the next sprite in line.
+            TileImage = Image.frombuffer('RGBA', (TileWidth[s],TileHeight[s]), TempTile, 'raw', 'RGBA', 0, 1)
         result_image.paste(TileImage, (PivotX[s] + (SpriteWidth // 2), PivotY[s] + (SpriteHeight // 2)), mask=0) # Paste the assembled tile into the sprite PNG.
 
     if UseGBAROM == True:
         outfile = (str(SpriteStart) + '/' + str(x) + '.png') # Setting up the file path.
     else:
         outfile = (SpriteName + '/' + str(x) + '.png') # Setting up the file path.
-    if TileBounds == False:
+    if TileBounds == False and ANMFormat != 6:
         result_image.putpalette(ANMPalette) # Applying the palette to the resulting image.
     result_image.save(outfile) # Saving the file.
     print("Saved to " + outfile) # We did the thing.
