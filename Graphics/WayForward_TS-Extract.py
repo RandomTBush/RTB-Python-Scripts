@@ -56,6 +56,10 @@ RawPalette = True # Set this to True to read palette values as multiples of 8 (0
 # Unfabulous!                                               [Set TSFormat = 1]
 # X-Men: The Official Game                                  [Set TSFormat = 1]
 # --------------------------------------------------------------------------------
+# PC / Consoles:
+# Shantae: Risky's Revenge - Director's Cut                 [Set TSFormat = 2]
+# Shantae Advance: Risky Revolution                         [Set TSFormat = 1]
+# --------------------------------------------------------------------------------
 # DS/DSi:
 # Aliens: Infestation                                       [Set TSFormat = 2]
 # American Dragon: Jake Long - Attack of the Dark Dragon    [Set TSFormat = 1]

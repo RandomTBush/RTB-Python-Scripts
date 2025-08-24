@@ -59,6 +59,10 @@ SpriteStart = 0x34E368 # Offset to the start of animation data in a GBA ROM, loc
 # Unfabulous!                                               [Set ANMFormat = 0]
 # X-Men: The Official Game                                  [Set ANMFormat = 0]
 # --------------------------------------------------------------------------------
+# PC / Consoles:
+# Shantae: Risky's Revenge - Director's Cut                 [Set ANMFormat = 4]
+# Shantae Advance: Risky Revolution                         [Set ANMFormat = 0]
+# --------------------------------------------------------------------------------
 # DS/DSi:
 # Aliens: Infestation                                       [Set ANMFormat = 3]
 # American Dragon: Jake Long - Attack of the Dark Dragon    [Set ANMFormat = 0]

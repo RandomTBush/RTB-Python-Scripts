@@ -54,6 +54,10 @@ ScreenStart = 0x96B074 # Offset to the start of the screen data in a GBA ROM. Ig
 # Unfabulous!                                               [Set LYRFormat = 3]
 # X-Men: The Official Game                                  [Set LYRFormat = 3]
 # --------------------------------------------------------------------------------
+# PC / Consoles:
+# Shantae: Risky's Revenge - Director's Cut                 [Set LYRFormat = 3]
+# Shantae Advance: Risky Revolution                         [Set LYRFormat = 2]
+# --------------------------------------------------------------------------------
 # DS/DSi [All games use LYRFormat = 3]:
 # Aliens: Infestation
 # American Dragon: Jake Long - Attack of the Dark Dragon
@@ -165,7 +169,7 @@ for x in range(ScreenCount):
     ScreenImage = Image.new('RGBA', (256, 256), (0, 0, 0, 0)) # Initializing the assembled screen PNG in memory.
     for y in range(256):
         MetatileID = struct.unpack('<H', scrfile.read(2))[0] # Which metatile is used for this offset. Screens are always 16x16 metatiles, or 256x256.
-        if ScreenFlags == 0x0010:
+        if ScreenFlags == 0x0010 or ScreenFlags == 0x0020:
             MetatileID = MetatileID & 0x03FF # 1024 metatiles maximum?
             MetatileStartX = (MetatileID & 0x000F) * 16 # Maths to determine X position of metatile sheet to cut.
             MetatileStartY = (MetatileID & 0x03F0) # More maths to determine Y position of metatile sheet to cut.
