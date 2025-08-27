@@ -19,7 +19,7 @@ ScreenStart = 0x96B074 # Offset to the start of the screen data in a GBA ROM. Ig
 # Instructions on how to use this script:
 # 1. Install both Python (either 2 or 3, both work) and Pillow: https://github.com/python-pillow/Pillow
 # 2. If ripping from a GBA game, use QuickBMS (https://aluigi.altervista.org/quickbms.htm) and one of my "WayForwardGBA" scripts (https://github.com/RandomTBush/RTB-QuickBMS-Scripts/tree/master/Archive) to unpack the game you want to rip from. For DS or Didj games, you can use something like Tinke to unpack the former and 7-Zip for the latter.
-# 3. Use my "WayForward_TS-Extract" script first to set up the "metatile" sheet (the included "BrambleMaze_metatile" and "scuttletown_pf_metatile" samples from Shantae Advance and Risky's Revenge respectively should give you an example of what you're looking for).
+# 3. Use my "WayForward_TS-Extract" script first to set up the "metatile" sheet to be used with this script.
 # 4. For a .LYR file, set the UseGBAROM option to False. Change the path for the "ScreenName" entry above to the name of the .LYR file you want to extract (if UseGBAROM = False, otherwise see the section below), and the "MetatilesName" with the name of the metatile image generated with step #3.
 # 5. With the previous steps done, run the script (no additional command-line parameters needed). If everything's ret-2-go, then resulting screens plus an assembled map will be in a subfolder with the same name as the .LYR file (if UseGBAROM = False) or the ROM offset (if UseGBAROM = True).
 
